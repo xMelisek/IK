@@ -87,6 +87,7 @@ impl Creature {
         return [joint_pos, ankle_pos, leg_pos];
     }
 
+    #[allow(unused_mut)]
     pub fn draw_leg(&self, mut d: &mut RaylibDrawHandle, index: usize) {
         let size = Vector2::new(self.leg_tex.width as f32, self.leg_tex.height as f32 / LEG_SEGMENTS as f32);
         for i in 0..LEG_SEGMENTS {
