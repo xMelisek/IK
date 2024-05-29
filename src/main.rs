@@ -1,5 +1,6 @@
 use raylib::prelude::*;
 use raylib::consts::KeyboardKey::*;
+use IK::calc_ik;
 
 mod creature;
 mod IK;
@@ -15,11 +16,8 @@ fn main() {
         .msaa_4x()
         .build();
 
-    let mut creature = creature::Creature::new(window_size / 2.0, 75.0, Vector2::new(5.0, 5.0));
-
-    //The maximum leg distance
-    let leg_max_length = 175.0;
-    let mut foot_pos = creature.pos;
+    let body_tex = rl.load_texture(&thread, "assets/c_body.png").unwrap();
+    let mut creature = creature::Creature::new(window_size / 2.0, 35.0, Vector2::new(45.0, 25.0), Vector2::new(0.0, -50.0), body_tex);
 
     let speed = 2.0;
 
@@ -30,59 +28,70 @@ fn main() {
         //Logic
         //--------
         //Move the body
+        let mut vel = Vector2::zero();
         if rl.is_key_down(KEY_W) {
-            creature.pos.y -= speed;
+            vel.y -= speed;
         }
         if rl.is_key_down(KEY_S) {
-            creature.pos.y += speed;
+            vel.y += speed;
         }
         if rl.is_key_down(KEY_A) {
-            creature.pos.x -= speed;
+            vel.x -= speed;
         }
         if rl.is_key_down(KEY_D) {
-            creature.pos.x += speed;
+            vel.x += speed;
         }
 
-        //Calculate the leg
-        let target_pos = rl.get_mouse_position();
-        let dist_ratio;
-        if creature.pos.distance_to(target_pos) > leg_max_length {
-            dist_ratio = leg_max_length / creature.pos.distance_to(target_pos);
+        if vel == Vector2::zero() {
+            //Force update the lerps to reset the legs
         }
-        else {
-            dist_ratio = 1.0;
-        }
-        let lerp_pos = (target_pos - creature.pos) * dist_ratio + creature.pos;
-        foot_pos = foot_pos.lerp(lerp_pos, 0.1);
-        let ankle_pos = creature.pos + IK::calc_ik(leg_max_length / 2.0, foot_pos - creature.pos, -1.0);
 
+        creature.add_force(Vector2::new(0.0, vel.y));
+        creature.rot += vel.x;
+
+        if rl.is_key_pressed(KEY_SPACE) {
+            creature.update_targets(Vector2::new(50.0, 50.0));
+        }
+
+        creature.calc_legs();
 
         //--------
         //Drawing
         //--------
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::BLACK);
-
-        //Draw leg connections
-        d.draw_line(creature.pos.x as i32, creature.pos.y as i32, ankle_pos.x as i32, ankle_pos.y as i32, Color::YELLOWGREEN);
-        d.draw_line(ankle_pos.x as i32, ankle_pos.y as i32, foot_pos.x as i32, foot_pos.y as i32, Color::YELLOWGREEN);
-        //The body and the leg
-        d.draw_circle(creature.pos.x as i32, creature.pos.y as i32, 20.0, Color::WHITE);
-        //Ankle pos.
-        d.draw_circle(ankle_pos.x as i32, ankle_pos.y as i32, 5.0, Color::WHITE);
-        //Leg circle
-        d.draw_circle(foot_pos.x as i32, foot_pos.y as i32, 10.0, Color::WHITE);
-
-        //Draw the target
-        d.draw_circle(target_pos.x as i32, target_pos.y as i32, 5.0, Color::RED);
-        //Draw the lerp
-        d.draw_circle(lerp_pos.x as i32, foot_pos.y as i32, 5.0, Color::YELLOW);
         
-        //Info
-        d.draw_text("Red - target position - move it with your mouse", 0, 0, 20, Color::RED);
-        d.draw_text("Yellow - current leg lerp position to the target", 0, 25, 20, Color::YELLOW);
-        d.draw_text("White big circle - the body \nWhite small circles - leg parts", 0, 50, 20, Color::WHITE);
-
-        d.draw_fps(0, 100);
+        //Draw spider body
+        d.draw_texture_pro(&creature.body_tex, Rectangle {
+            x: 0.0,
+            y: 0.0,
+            width: creature.body_tex.width as f32,
+            height: creature.body_tex.height as f32,
+        }, Rectangle {
+            x: creature.pos.x,
+            y: creature.pos.y,
+            width: creature.body_tex.width as f32,
+            height: creature.body_tex.height as f32,
+        }, Vector2::new(creature.body_tex.width as f32, creature.body_tex.height as f32) / 2.0, creature.rot, Color::WHITE);
+        //Draw leg targets
+        for i in 0..4 {
+            let pos = creature.get_leg(i);
+            let joint = creature.pos + creature.get_joint(i).rotated(creature.rot.to_radians());
+            let ankle = creature.pos + calc_ik(creature.leg_length, pos - creature.pos, if(i == 0 || i == 3) {-1.0} else {1.0});
+            
+            d.draw_line(joint.x as i32, joint.y as i32, ankle.x as i32, ankle.y as i32, Color::YELLOWGREEN);
+            d.draw_line(ankle.x as i32, ankle.y as i32, pos.x as i32, pos.y as i32, Color::YELLOWGREEN);
+            d.draw_circle(ankle.x as i32, ankle.y as i32, 4.0, Color::WHITE);
+            d.draw_circle(pos.x as i32, pos.y as i32, 5.0, Color::WHITE);
+        }
+        // for i in 0..4 {
+        //     let pos = creature.get_leg_target(i) + creature.pos;
+        //     d.draw_circle(pos.x as i32, pos.y as i32, 4.0, Color::RED);
+        // }
+        // for i in 0..4 {
+        //     let pos = creature.get_leg_lerp(i);
+        //     d.draw_circle(pos.x as i32, pos.y as i32, 3.0, Color::YELLOW);
+        // }
+        d.draw_fps(0, 0);
     }
 }
