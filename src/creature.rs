@@ -1,11 +1,11 @@
-// 4 limbs - Done
-// Body - Done
 // It moves faster when the legs are pracitcally in their correct places so kind of standing
 // More natural leg placement
+// Velocity-based target placement
 /*
-leg target - Done
+0-4 - leg indexes
+B - Body
 0   1
-  C
+  B
 3   2
 */
 use raylib::prelude::*;
@@ -39,20 +39,20 @@ pub struct Creature {
 
 impl Creature {
     pub fn new(pos: Vector2, leg_length: f32, leg_offset: Vector2, add_offset: Vector2, body_tex: Texture2D, leg_tex: Texture2D) -> Creature {
-        let mut targets = Creature::calc_leg_targets(leg_offset, 0.0);
-        for i in 0..targets.len() {
-            targets[i] += add_offset;
-        }
+        let targets = Creature::calc_leg_targets(leg_offset, add_offset, 0.0);
+
         let mut lerps = [ Vector2::zero(); 4 ];
         for i in 0..targets.len() {
             lerps[i] = pos + targets[i];
         }
+
         let joints = [
             -Vector2::new(body_tex.width as f32 /2.0, body_tex.height as f32/2.0),
             Vector2::new(body_tex.width as f32 /2.0, -body_tex.height as f32/2.0),
             Vector2::new(body_tex.width as f32 /2.0, body_tex.height as f32/2.0),
             Vector2::new(-body_tex.width as f32 /2.0, body_tex.height as f32/2.0),
         ];
+        
         Creature {
             pos: pos,
             rot: 0.0,
@@ -125,22 +125,25 @@ impl Creature {
     }
 
     pub fn update_targets(&mut self, leg_offset: Vector2) {
-        self.targets = Creature::calc_leg_targets(leg_offset, self.rot);
+        self.targets = Creature::calc_leg_targets(leg_offset, self.add_offset, self.rot);
         self.leg_offset = leg_offset;
     }
 
     fn update_lerps(&mut self) {
         for i in 0..4 {
-            if (self.pos + self.joints[i].rotated(self.rot.to_radians())).distance_to(self.lerps[i]) > self.leg_length * 2.1 {
-                self.lerps[i] = self.pos + self.targets[i] + self.add_offset.rotated(self.rot.to_radians());
+            // if (self.pos + self.joints[i].rotated(self.rot.to_radians())).distance_to(self.lerps[i]) > self.leg_length * 2.1 {
+            //     self.lerps[i] = self.pos + self.targets[i];
+            // }
+            if (self.pos + self.targets[i]).distance_to(self.legs[i]) > self.leg_length * 2.0 {
+                self.lerps[i] = self.pos + self.targets[i];
             }
         }
     }
 
-    fn calc_leg_targets(leg_offset: Vector2, rot: f32) -> [ Vector2; 4 ]{
-        [ -leg_offset.rotated(rot.to_radians()),
-        Vector2::new(leg_offset.x, -leg_offset.y).rotated(rot.to_radians()),
-        leg_offset.rotated(rot.to_radians()),
-        Vector2::new(-leg_offset.x, leg_offset.y).rotated(rot.to_radians()) ]
+    fn calc_leg_targets(leg_offset: Vector2, add_offset: Vector2, rot: f32) -> [ Vector2; 4 ]{
+        [ (-leg_offset + add_offset).rotated(rot.to_radians()),
+        (Vector2::new(leg_offset.x, -leg_offset.y) + add_offset).rotated(rot.to_radians()),
+        (leg_offset + add_offset).rotated(rot.to_radians()),
+        (Vector2::new(-leg_offset.x, leg_offset.y) + add_offset).rotated(rot.to_radians()) ]
     }
 }
