@@ -196,8 +196,8 @@ impl Creature {
 
     fn update_lerps(&mut self) {
         for i in 0..4 {
-            if (self.pos + self.targets[i]).distance_to(self.lerps[i]) > self.leg_length {
-                self.lerps[i] = self.pos + self.targets[i] + Vector2::new(0.0, -self.leg_length).rotated(self.rot.to_radians());
+            if (self.pos + self.joints[i].rotated(self.rot.to_radians())).distance_to(self.lerps[i]) > self.leg_length {
+                self.lerps[i] = self.pos + self.targets[i];
             }
         }
     }

@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use raylib::prelude::*;
 use raylib::consts::KeyboardKey::*;
 use creature::*;
@@ -20,12 +22,12 @@ fn main() {
         .msaa_4x()
         .build();
 
-    // rl.set_window_icon(image);
+    rl.set_window_icon(Image::load_image("assets/Icon.png").expect("Could not load the image"));
 
     let mut layer = Layers::VisualLayer;
     let body_tex = rl.load_texture(&thread, "assets/c_body.png").unwrap();
     let leg_tex = rl.load_texture(&thread, "assets/c_leg.png").unwrap();
-    let mut creature = Creature::new(window_size / 2.0, 25.0, Vector2::new(20.0, 25.0), Vector2::new(0.0, -15.0), body_tex, leg_tex);
+    let mut creature = Creature::new(window_size / 2.0, 30.0, Vector2::new(20.0, 25.0), Vector2::new(0.0, -15.0), body_tex, leg_tex);
 
     let speed = 1.0;
 
@@ -72,6 +74,7 @@ fn main() {
                 creature.draw(&mut d);
             },
             Layers::PhysicalLayer => {
+                #[cfg(debug_assertions)]
                 creature.draw_physics(&mut d);
             },
         }
