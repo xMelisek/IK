@@ -25,6 +25,7 @@ lerps and legs are global */
 
 pub struct Creature {
     pub pos: Vector2,
+    pub vel: Vector2,
     pub rot: f32,
     pub leg_length: f32,
     leg_offset: Vector2,
@@ -55,6 +56,7 @@ impl Creature {
         
         Creature {
             pos: pos,
+            vel: Vector2::zero(),
             rot: 0.0,
             leg_length: leg_length,
             leg_offset: leg_offset,
@@ -69,7 +71,68 @@ impl Creature {
     }
 
     pub fn add_force(&mut self, vel: Vector2) {
-        self.pos += vel.rotated(self.rot.to_radians());
+        self.vel += vel;
+    }
+
+    pub fn process(&mut self) {
+        self.pos += self.vel.rotated(self.rot.to_radians());
+
+        if self.vel == Vector2::zero() {
+            // Set the leg targets to a default position
+        }
+
+        // Direction
+        self.calc_legs();
+        self.vel = Vector2::zero();
+    }
+    
+    pub fn draw(&self, mut d: &mut RaylibDrawHandle) {
+        // Draw legs
+        for i in 0..4 {
+            self.draw_leg(&mut d, i);
+        }
+        // Draw body
+        d.draw_texture_pro(&self.body_tex, Rectangle {
+            x: 0.0,
+            y: 0.0,
+            width: self.body_tex.width as f32,
+            height: self.body_tex.height as f32,
+        }, Rectangle {
+            x: self.pos.x,
+            y: self.pos.y,
+            width: self.body_tex.width as f32,
+            height: self.body_tex.height as f32,
+        }, Vector2::new(self.body_tex.width as f32, self.body_tex.height as f32) / 2.0, self.rot, Color::WHITE);
+    }
+
+    #[allow(unused_mut)]
+    #[cfg(debug_assertions)]
+    pub fn draw_physics(&self, mut d: &mut RaylibDrawHandle) {
+        // Draw leg targets
+        for i in 0..4 {
+            let points = self.get_points(i);
+
+            d.draw_line(points[0].x as i32, points[0].y as i32, points[1].x as i32, points[1].y as i32, Color::YELLOWGREEN);
+            d.draw_line(points[1].x as i32, points[1].y as i32, points[2].x as i32, points[2].y as i32, Color::YELLOWGREEN);
+            d.draw_spline_bezier_quadratic(&points, 5.0, Color::BLUE);
+            d.draw_circle(points[1].x as i32, points[1].y as i32, 4.0, Color::WHITE);
+            d.draw_circle(points[2].x as i32, points[2].y as i32, 5.0, Color::WHITE);
+        }
+        for i in 0..4 {
+            let pos = self.get_leg_target(i) + self.pos;
+            d.draw_circle(pos.x as i32, pos.y as i32, 4.0, Color::RED);
+        }
+        for i in 0..4 {
+            let pos = self.get_leg_lerp(i);
+            d.draw_circle(pos.x as i32, pos.y as i32, 3.0, Color::YELLOW);
+        }
+        // Draw body
+        d.draw_rectangle_pro(Rectangle {
+            x: self.pos.x,
+            y: self.pos.y,
+            width: self.body_tex.width as f32,
+            height: self.body_tex.height as f32,
+        }, Vector2::new(self.body_tex.width as f32/ 2.0, self.body_tex.height as f32 / 2.0), self.rot, Color::WHITE);
     }
 
     pub fn calc_legs(&mut self) {
@@ -82,7 +145,7 @@ impl Creature {
 
     pub fn get_points(&self, leg_index: usize) -> [Vector2;3] {
         let joint_pos = self.joints[leg_index].rotated(self.rot.to_radians()) + self.pos;
-        let ankle_pos = self.pos + calc_ik(self.leg_length, self.legs[leg_index] - self.pos, if leg_index == 0 || leg_index == 3 {-1.0} else {1.0});
+        let ankle_pos = self.pos + calc_ik(self.leg_length / 2.0, self.legs[leg_index] - (self.pos + self.joints[leg_index]), if leg_index == 0 || leg_index == 3 {-1.0} else {1.0});
         let leg_pos = self.legs[leg_index];
         return [joint_pos, ankle_pos, leg_pos];
     }
@@ -104,7 +167,7 @@ impl Creature {
                 y: pos.y,
                 width: size.x,
                 height: size.y,
-            }, size / 2.0, dir.to_degrees(), Color::WHITE); 
+            }, size / 2.0, dir.to_degrees() - 90.0, Color::WHITE); 
         }
     }
 
@@ -131,10 +194,7 @@ impl Creature {
 
     fn update_lerps(&mut self) {
         for i in 0..4 {
-            // if (self.pos + self.joints[i].rotated(self.rot.to_radians())).distance_to(self.lerps[i]) > self.leg_length * 2.1 {
-            //     self.lerps[i] = self.pos + self.targets[i];
-            // }
-            if (self.pos + self.targets[i]).distance_to(self.legs[i]) > self.leg_length * 2.0 {
+            if (self.pos + self.targets[i]).distance_to(self.legs[i]) > self.leg_length {
                 self.lerps[i] = self.pos + self.targets[i];
             }
         }
