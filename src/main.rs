@@ -25,9 +25,9 @@ fn main() {
     let mut layer = Layers::VisualLayer;
     let body_tex = rl.load_texture(&thread, "assets/c_body.png").unwrap();
     let leg_tex = rl.load_texture(&thread, "assets/c_leg.png").unwrap();
-    let mut creature = Creature::new(window_size / 2.0, 25.0, Vector2::new(15.0, 25.0), Vector2::new(0.0, -5.0), body_tex, leg_tex);
+    let mut creature = Creature::new(window_size / 2.0, 25.0, Vector2::new(20.0, 25.0), Vector2::new(0.0, -15.0), body_tex, leg_tex);
 
-    let speed = 2.0;
+    let speed = 1.0;
 
     rl.set_target_fps(60);
 

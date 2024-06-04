@@ -120,6 +120,8 @@ impl Creature {
         }
         for i in 0..4 {
             let pos = self.get_leg_target(i) + self.pos;
+            let joint = self.pos + self.targets[i];
+            d.draw_circle_lines(joint.x as i32, joint.y as i32, self.leg_length, Color::LIMEGREEN);
             d.draw_circle(pos.x as i32, pos.y as i32, 4.0, Color::RED);
         }
         for i in 0..4 {
@@ -194,8 +196,8 @@ impl Creature {
 
     fn update_lerps(&mut self) {
         for i in 0..4 {
-            if (self.pos + self.targets[i]).distance_to(self.legs[i]) > self.leg_length {
-                self.lerps[i] = self.pos + self.targets[i];
+            if (self.pos + self.targets[i]).distance_to(self.lerps[i]) > self.leg_length {
+                self.lerps[i] = self.pos + self.targets[i] + Vector2::new(0.0, -self.leg_length).rotated(self.rot.to_radians());
             }
         }
     }
